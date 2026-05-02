@@ -23,8 +23,9 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 # Cookies fayl yo'li
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), "instagram_cookies.txt")
 
-# Kanal qo'shish:
-CHANNELS = [{"id": "-1001886192313", "username": "ITdarslik", "name": "IT kurs darsliklari"}]
+CHANNELS = [
+    {"id": "-1001886192313", "username": "ITdarslik", "name": "📚 IT kurs darsliklari"}
+]
 
 def get_platform(url: str) -> str:
     if 'instagram' in url:
@@ -87,6 +88,17 @@ def download_with_ytdlp(url: str, tmpdir: str, use_cookies: bool = False):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+
+    # Obuna tekshirish
+    subscribed = await check_subscription(user.id, context.bot)
+    if not subscribed:
+        text = (
+            f"👋 Salom, <b>{user.first_name}</b>!\n\n"
+            "⚠️ Botdan foydalanish uchun quyidagi kanalga obuna bo'ling:"
+        )
+        await update.message.reply_html(text, reply_markup=get_subscribe_keyboard())
+        return
+
     text = (
         f"👋 Salom, <b>{user.first_name}</b>!\n\n"
         "🎬 <b>Video Yuklovchi Bot</b>\n\n"
@@ -99,7 +111,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<code>https://www.instagram.com/reel/ABC123/</code>\n"
         "<code>https://www.tiktok.com/@user/video/123</code>"
     )
-    await update.message.reply_html(text)
+
+    # Start tugmalari
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📥 Video yuklash", switch_inline_query_current_chat="")],
+        [InlineKeyboardButton("📢 Kanal", url="https://t.me/ITdarslik"),
+         InlineKeyboardButton("ℹ️ Yordam", callback_data="help")],
+    ])
+    await update.message.reply_html(text, reply_markup=keyboard)
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
@@ -192,9 +211,39 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_sub_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
+    if query.data == "help":
+        text = (
+            "📖 <b>Yordam</b>\n\n"
+            "1️⃣ Havola yuboring\n"
+            "2️⃣ Bot yuklab yuboradi\n\n"
+            "⚠️ <b>Eslatma:</b>\n"
+            "• Faqat ochiq (public) postlar\n"
+            "• Fayl 50 MB dan kichik bo'lishi kerak\n"
+            "• Muammo bo'lsa /start bosing"
+        )
+        await query.edit_message_text(text, parse_mode='HTML')
+        return
+
+    # check_sub
     subscribed = await check_subscription(query.from_user.id, context.bot)
     if subscribed:
-        await query.edit_message_text("✅ Obuna tasdiqlandi!\n\nHavola yuboring.")
+        user = query.from_user
+        text = (
+            f"✅ Obuna tasdiqlandi!\n\n"
+            f"👋 Salom, <b>{user.first_name}</b>!\n\n"
+            "🎬 <b>Video Yuklovchi Bot</b>\n\n"
+            "📱 Qo'llab-quvvatlanadigan platformalar:\n"
+            "• Instagram (video, reels)\n"
+            "• TikTok (video)\n"
+            "• YouTube (video)\n\n"
+            "📎 Havola yuboring — men yuklab beraman!"
+        )
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📢 Kanal", url="https://t.me/ITdarslik"),
+             InlineKeyboardButton("ℹ️ Yordam", callback_data="help")],
+        ])
+        await query.edit_message_text(text, parse_mode='HTML', reply_markup=keyboard)
     else:
         await query.answer("❌ Hali obuna bo'lmadingiz!", show_alert=True)
 
@@ -206,7 +255,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
-    app.add_handler(CallbackQueryHandler(check_sub_callback, pattern="^check_sub$"))
+    app.add_handler(CallbackQueryHandler(check_sub_callback, pattern="^check_sub$|^help$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
     logger.info("Bot ishga tushdi!")
