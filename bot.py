@@ -24,7 +24,7 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), "instagram_cookies.txt")
 
 # Kanal qo'shish:
- CHANNELS = [{"id": "-1001886192313", "username": "ITdarslik", "name": "IT kurs darsliklari"}]
+CHANNELS = [{"id": "-1001886192313", "username": "ITdarslik", "name": "IT kurs darsliklari"}]
 
 def get_platform(url: str) -> str:
     if 'instagram' in url:
