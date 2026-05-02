@@ -1,0 +1,2 @@
+# tezinstabot
+yuklaymiz
